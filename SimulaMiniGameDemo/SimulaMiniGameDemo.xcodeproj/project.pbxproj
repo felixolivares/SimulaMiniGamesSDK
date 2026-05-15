@@ -1,0 +1,267 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		FBD4EAA9469342FC821334CB /* SimulaMiniGameSDK in Frameworks */ = {isa = PBXBuildFile; productRef = 0B08016AE3CB4E71A2C4DE87 /* SimulaMiniGameSDK */; };
+		29EE88190EF342EF80ECF11D /* SimulaMiniGameDemoApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0203D49C3F2443DE86A9A4FE /* SimulaMiniGameDemoApp.swift */; };
+		5D2A76238AE14DC4BDEFB64D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 8C49FE710E8F47219AF4E831 /* Assets.xcassets */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		708152ECF21F4EB48DD6E575 /* SimulaMiniGameDemo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SimulaMiniGameDemo.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		0203D49C3F2443DE86A9A4FE /* SimulaMiniGameDemoApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulaMiniGameDemoApp.swift; sourceTree = "<group>"; };
+		8C49FE710E8F47219AF4E831 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A46686F4CACD4639A563454C /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FBD4EAA9469342FC821334CB /* SimulaMiniGameSDK in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		7FC6C3C7D4D54D6E8B5D6D71 = {
+			isa = PBXGroup;
+			children = (
+				E692B7D0A6FA4C2F855A1A63 /* SimulaMiniGameDemo */,
+				E1A3F891DBD64B0CADDE18D6 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		E692B7D0A6FA4C2F855A1A63 /* SimulaMiniGameDemo */ = {
+			isa = PBXGroup;
+			children = (
+				0203D49C3F2443DE86A9A4FE /* SimulaMiniGameDemoApp.swift */,
+				8C49FE710E8F47219AF4E831 /* Assets.xcassets */,
+			);
+			path = SimulaMiniGameDemo;
+			sourceTree = "<group>";
+		};
+		E1A3F891DBD64B0CADDE18D6 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				708152ECF21F4EB48DD6E575 /* SimulaMiniGameDemo.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		BBDEAD76630144E7941BDCC6 /* SimulaMiniGameDemo */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B8244F3B66CD40F6B9403A45 /* Build configuration list for PBXNativeTarget "SimulaMiniGameDemo" */;
+			buildPhases = (
+				928758BFE6744AF68BC8F0EE /* Sources */,
+				A46686F4CACD4639A563454C /* Frameworks */,
+				BA35171F681549118ED06141 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = SimulaMiniGameDemo;
+			packageProductDependencies = (
+				0B08016AE3CB4E71A2C4DE87 /* SimulaMiniGameSDK */,
+			);
+			productName = SimulaMiniGameDemo;
+			productReference = 708152ECF21F4EB48DD6E575 /* SimulaMiniGameDemo.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		7D3E41AF3CDA41D894725B7F /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2600;
+				LastUpgradeCheck = 2600;
+				TargetAttributes = {
+					BBDEAD76630144E7941BDCC6 = {
+						CreatedOnToolsVersion = 26.0;
+					};
+				};
+			};
+			buildConfigurationList = F596A0B5765E4D4E9A20DD4F /* Build configuration list for PBXProject "SimulaMiniGameDemo" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 7FC6C3C7D4D54D6E8B5D6D71;
+			packageReferences = (
+				E3E8F2B30F084AC49461192D /* XCLocalSwiftPackageReference "../" */,
+			);
+			productRefGroup = E1A3F891DBD64B0CADDE18D6 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				BBDEAD76630144E7941BDCC6 /* SimulaMiniGameDemo */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		BA35171F681549118ED06141 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5D2A76238AE14DC4BDEFB64D /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		928758BFE6744AF68BC8F0EE /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				29EE88190EF342EF80ECF11D /* SimulaMiniGameDemoApp.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		201790E6E6D44173B11F3CE0 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_TESTABILITY = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		4D1A1FDB4C83489185570324 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+			};
+			name = Release;
+		};
+		9FF06478C16C46FBB13C41E4 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.simula.SimulaMiniGameDemo;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		FF267B6898EB4B8BA715B805 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.simula.SimulaMiniGameDemo;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		F596A0B5765E4D4E9A20DD4F /* Build configuration list for PBXProject "SimulaMiniGameDemo" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				201790E6E6D44173B11F3CE0 /* Debug */,
+				4D1A1FDB4C83489185570324 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		B8244F3B66CD40F6B9403A45 /* Build configuration list for PBXNativeTarget "SimulaMiniGameDemo" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9FF06478C16C46FBB13C41E4 /* Debug */,
+				FF267B6898EB4B8BA715B805 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		E3E8F2B30F084AC49461192D /* XCLocalSwiftPackageReference "../" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ..;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		0B08016AE3CB4E71A2C4DE87 /* SimulaMiniGameSDK */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E3E8F2B30F084AC49461192D /* XCLocalSwiftPackageReference "../" */;
+			productName = SimulaMiniGameSDK;
+		};
+/* End XCSwiftPackageProductDependency section */
+
+	};
+	rootObject = 7D3E41AF3CDA41D894725B7F /* Project object */;
+}
