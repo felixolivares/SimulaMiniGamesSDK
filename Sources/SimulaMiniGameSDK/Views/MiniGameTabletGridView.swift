@@ -14,31 +14,29 @@ struct MiniGameTabletGridView: View {
     var body: some View {
         VStack(spacing: 0) {
             GeometryReader { outer in
-                let cardHeight = max(352, outer.size.height * 0.52)
-                let cardWidth = cardHeight * (9.0 / 16.0)
                 let totalPages = Self.pageCount(for: games.count)
                 let slice = Self.games(forPage: currentPage, in: games)
 
+                let (cardWidth, cardHeight) = Self.portraitCoverDimensions(bounds: outer.size)
+
                 LazyVGrid(
                     columns: Array(
-                        repeating: GridItem(.flexible(), spacing: 24),
+                        repeating: GridItem(.flexible(minimum: 140, maximum: .infinity), spacing: 24, alignment: .center),
                         count: 4
                     ),
                     alignment: .center,
-                    spacing: 0
+                    spacing: 24
                 ) {
                     ForEach(slice, id: \.id) { game in
-                        GameCoverCardView(game: game) {
+                        GameCoverCardView(game: game, borderStrokeColor: theme.cardHighlightStrokeColor) {
                             onSelect(game)
                         }
-                        .frame(width: cardWidth)
-                        .frame(maxWidth: .infinity)
+                        .frame(width: cardWidth, height: cardHeight)
                     }
                     if slice.count < desktopPageSize {
                         ForEach(0..<(desktopPageSize - slice.count), id: \.self) { _ in
                             Color.clear
-                                .frame(width: cardWidth, height: 1)
-                                .frame(maxWidth: .infinity)
+                                .frame(width: cardWidth, height: cardHeight)
                         }
                     }
                 }
@@ -223,6 +221,28 @@ struct MiniGameTabletGridView: View {
         if d == 0 { return 1 }
         if d == 1 { return 0.5 }
         return 0.3
+    }
+
+    /// Locks each tile to **`width × height`** so flexible grid columns cannot flatten covers into strips on iPad.
+    private static func portraitCoverDimensions(bounds: CGSize) -> (CGFloat, CGFloat) {
+        let vw = max(4, bounds.width)
+        let vh = max(4, bounds.height)
+        let colSpacing: CGFloat = 24
+        let cols = CGFloat(desktopPageSize)
+        let interColumn = colSpacing * (cols - 1)
+        let maxPortraitWidth = max(104, floor((vw - interColumn) / cols))
+
+        var portraitH = max(352, vh * 0.52)
+        var portraitW = portraitH * CarouselLayout.portraitAspect
+        if portraitW > maxPortraitWidth {
+            portraitW = maxPortraitWidth
+            portraitH = portraitW / CarouselLayout.portraitAspect
+        }
+
+        portraitH = min(portraitH, max(352, vh * 0.88))
+        portraitW = min(portraitH * CarouselLayout.portraitAspect, maxPortraitWidth)
+        portraitH = portraitW / CarouselLayout.portraitAspect
+        return (portraitW, portraitH)
     }
 
     private static func pageCount(for count: Int) -> Int {

@@ -9,6 +9,8 @@ enum SimulaSDKError: LocalizedError {
     case httpStatus(Int)
     case invalidResponse
     case sessionCreationFailed
+    /// No `sessionId` after bootstrap — required for playable + ad lifecycle calls.
+    case missingSession
 
     var errorDescription: String? {
         switch self {
@@ -20,6 +22,8 @@ enum SimulaSDKError: LocalizedError {
             return "Unexpected response from server"
         case .sessionCreationFailed:
             return "Could not create session"
+        case .missingSession:
+            return "No Simula session is available yet"
         }
     }
 }

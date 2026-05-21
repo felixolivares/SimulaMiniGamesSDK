@@ -72,6 +72,67 @@ public final class MiniGameProvider: ObservableObject {
     public func notifyMenuGameSelected(menuId: String, gameName: String) async {
         await api.trackMenuGameClick(menuId: menuId, gameName: gameName, apiKey: apiKey)
     }
+
+    /// Loads the playable minigame iframe + ad identifiers (`React` **`getMinigame`**).
+    public func bootstrapPlayableMinigame(
+        gameTypeId: String,
+        viewportWidth: Int,
+        viewportHeight: Int,
+        characterId: String,
+        characterName: String,
+        characterImageURL: URL?,
+        characterDescription: String?,
+        messages: [MiniGameMessage] = [],
+        delegateCharacterInGame: Bool = true,
+        menuId: String?,
+        conversationId: String? = nil,
+        entryPoint: String? = nil
+    ) async throws -> InitMinigameResult {
+        guard let sessionId else {
+            throw SimulaSDKError.missingSession
+        }
+
+        let charPic = characterImageURL?.absoluteString
+        return try await api.initMinigame(
+            gameTypeId: gameTypeId,
+            sessionId: sessionId,
+            widthPoints: max(320, viewportWidth),
+            heightPoints: max(320, viewportHeight),
+            charId: characterId,
+            charName: characterName,
+            charImage: charPic,
+            charDesc: characterDescription,
+            messages: messages,
+            delegateCharacter: delegateCharacterInGame,
+            menuId: menuId,
+            convId: conversationId,
+            entryPoint: entryPoint
+        )
+    }
+
+    public func fetchPostGameInterstitialURL(adId: String) async throws -> URL? {
+        guard let sessionId else {
+            throw SimulaSDKError.missingSession
+        }
+        return try await api.fetchMinigameFallbackAdIframeURL(adId: adId, sessionId: sessionId)
+    }
+
+    /// Best-effort beacon matching React `reportAdInterstitial`.
+    public func reportMiniGameAdInterstitial(
+        serveId: String?,
+        adSource: MiniGameAdInterstitialSource,
+        renderedFormat: String? = nil
+    ) async {
+        guard let sessionId else { return }
+        guard let serveId, !serveId.isEmpty else { return }
+
+        await api.reportMiniGameAdInterstitial(
+            serveId: serveId,
+            sessionId: sessionId,
+            adSource: adSource,
+            renderedFormat: renderedFormat
+        )
+    }
 }
 
 public struct CatalogPayload: Sendable {

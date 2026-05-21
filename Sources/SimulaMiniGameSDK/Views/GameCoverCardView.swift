@@ -4,6 +4,8 @@ import SwiftUI
 struct GameCoverCardView: View {
     let game: GameData
     let cornerRadius: CGFloat
+    /// Outer stroke for the tile (maps to React `borderColor` / highlight).
+    let borderStrokeColor: Color
     let onSelect: () -> Void
 
     @State private var imageStage: ImageLoadStage = .primary
@@ -16,9 +18,10 @@ struct GameCoverCardView: View {
 
     private let fallbackEmojis = ["🎲", "🎮", "🎯", "🧩"]
 
-    init(game: GameData, cornerRadius: CGFloat = 18, onSelect: @escaping () -> Void) {
+    init(game: GameData, cornerRadius: CGFloat = 18, borderStrokeColor: Color = Color(red: 120 / 255, green: 200 / 255, blue: 255 / 255).opacity(0.1), onSelect: @escaping () -> Void) {
         self.game = game
         self.cornerRadius = cornerRadius
+        self.borderStrokeColor = borderStrokeColor
         self.onSelect = onSelect
     }
 
@@ -36,8 +39,7 @@ struct GameCoverCardView: View {
                 Color.white.opacity(0.06)
 
                 coverVisual
-                    .scaleEffect(1.04)
-                    .clipped()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
 
                 LinearGradient(
                     stops: [
@@ -57,12 +59,11 @@ struct GameCoverCardView: View {
                     .shadow(color: .black.opacity(0.65), radius: 12, x: 0, y: 10)
                     .padding(10)
             }
-            .frame(minHeight: 302)
-            .aspectRatio(9.0 / 16.0, contentMode: .fit)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .stroke(Color(red: 120 / 255, green: 200 / 255, blue: 255 / 255).opacity(0.1), lineWidth: 2)
+                    .stroke(borderStrokeColor, lineWidth: 2)
             )
             .shadow(color: .black.opacity(0.4), radius: 12, x: 0, y: 8)
         }
@@ -75,17 +76,23 @@ struct GameCoverCardView: View {
         Group {
             switch imageStage {
             case .primary:
-                if let url = primaryURL {
+                if game.gifCover != nil, let url = primaryURL {
+                    RemoteUIImageCover(url: url)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if let url = primaryURL {
                     AsyncImage(url: url, transaction: Transaction(animation: nil)) { phase in
                         switch phase {
                         case .success(let image):
                             image
                                 .resizable()
                                 .scaledToFill()
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
                         case .failure:
                             Color.clear.onAppear { advanceStage() }
                         case .empty:
-                            ProgressView().tint(.white.opacity(0.4))
+                            ProgressView()
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                .tint(.white.opacity(0.4))
                         @unknown default:
                             Color.clear
                         }
@@ -101,10 +108,13 @@ struct GameCoverCardView: View {
                             image
                                 .resizable()
                                 .scaledToFill()
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
                         case .failure:
                             Color.clear.onAppear { advanceStage() }
                         case .empty:
-                            ProgressView().tint(.white.opacity(0.4))
+                            ProgressView()
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                .tint(.white.opacity(0.4))
                         @unknown default:
                             Color.clear
                         }
@@ -124,6 +134,7 @@ struct GameCoverCardView: View {
                 Text(game.iconFallback ?? fallbackEmoji)
                     .font(.system(size: 48))
             )
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private var fallbackEmoji: String {

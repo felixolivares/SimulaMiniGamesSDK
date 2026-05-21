@@ -22,10 +22,21 @@ enum CarouselLayout {
     }
 }
 
-/// Carousel for `.compact` width — peeking neighbors, scroll‑snap centre, neighbour scale; **pure SwiftUI** (no bridging).
+/// Carousel for `.compact` width — peeking neighbours, scroll‑snap centre, neighbour scale, **`3 × N`** infinite strip.
 struct MiniGamePhoneCarouselView: View {
     let games: [GameData]
+    let cardBorderStrokeColor: Color
     let onSelect: (GameData) -> Void
+
+    init(
+        games: [GameData],
+        cardBorderStrokeColor: Color = Color(red: 120 / 255, green: 200 / 255, blue: 255 / 255).opacity(0.1),
+        onSelect: @escaping (GameData) -> Void
+    ) {
+        self.games = games
+        self.cardBorderStrokeColor = cardBorderStrokeColor
+        self.onSelect = onSelect
+    }
 
     var body: some View {
         GeometryReader { geo in
@@ -65,7 +76,7 @@ struct MiniGamePhoneCarouselView: View {
     }
 
     private func soloCard(_ game: GameData, cardWidth: CGFloat, cardHeight: CGFloat, viewportWidth: CGFloat) -> some View {
-        GameCoverCardView(game: game) {
+        GameCoverCardView(game: game, borderStrokeColor: cardBorderStrokeColor) {
             onSelect(game)
         }
         .frame(width: cardWidth, height: cardHeight)
@@ -80,37 +91,41 @@ struct MiniGamePhoneCarouselView: View {
         cardHeight: CGFloat
     ) -> some View {
         let rowH = totalRowHeight(cardHeight: cardHeight)
-        return MiniGamePhoneSnapCarousel(
+        return MiniGameInfiniteCoverCarousel(
             games: games,
+            cardBorderStrokeColor: cardBorderStrokeColor,
             viewportWidth: max(8, viewportWidth),
             cardWidth: cardWidth,
             cardHeight: cardHeight,
             rowHeight: rowH,
+            cardGap: CarouselLayout.carouselCardGap,
             onSelect: onSelect
         )
         .frame(width: max(8, viewportWidth), height: rowH)
     }
 }
 
-// MARK: - Pure SwiftUI snap carousel
+// MARK: - RN `MobileCarousel`-style triple strip
 
-private struct MiniGamePhoneSnapCarousel: View {
+private struct MiniGameInfiniteCoverCarousel: View {
     let games: [GameData]
+    let cardBorderStrokeColor: Color
     let viewportWidth: CGFloat
     let cardWidth: CGFloat
     let cardHeight: CGFloat
     let rowHeight: CGFloat
+    let cardGap: CGFloat
     let onSelect: (GameData) -> Void
 
     @State private var scrollOffset: CGFloat = 0
     @State private var hasSyncedInitialOffset = false
     @State private var isDragging = false
     @State private var dragStartScrollOffset: CGFloat = 0
-    @State private var dragStartIndex: Int = 0
-    /// After a carousel drag, finger-up often still activates `GameCoverCardView`’s `Button`, which dismissed the modal via `handleSelect`; blocks that stray action briefly.
+    @State private var dragStartPhysical: Int = 0
+    /// After a carousel drag, finger-up often still activates `GameCoverCardView`’s `Button`; blocks stray taps briefly.
     @State private var suppressCardSelection: Bool = false
 
-    private var gap: CGFloat { CarouselLayout.carouselCardGap }
+    private var gap: CGFloat { cardGap }
     private var slot: CGFloat { cardWidth + gap }
     private var sideInset: CGFloat { max(0, (viewportWidth - cardWidth) / 2) }
 
@@ -118,28 +133,45 @@ private struct MiniGamePhoneSnapCarousel: View {
         games.map(\.id).joined(separator: "|")
     }
 
-    private func settledOffset(forIndex index: Int) -> CGFloat {
-        let centerX = sideInset + CGFloat(index) * slot + cardWidth / 2
+    private struct LoopTile: Identifiable {
+        let id: String
+        let physicalIndex: Int
+        let game: GameData
+    }
+
+    private var tiles: [LoopTile] {
+        let n = games.count
+        guard n > 0 else { return [] }
+        return (0 ..< 3).flatMap { copy in
+            games.enumerated().map { idx, game in
+                let physical = copy * n + idx
+                return LoopTile(id: "\(physical)-\(game.id)", physicalIndex: physical, game: game)
+            }
+        }
+    }
+
+    private func settledPhysical(_ physical: Int) -> CGFloat {
+        let centerX = sideInset + CGFloat(physical) * slot + cardWidth / 2
         return viewportWidth / 2 - centerX
     }
 
     private func clampedOffset(_ x: CGFloat) -> CGFloat {
         let n = games.count
-        guard n > 1 else { return settledOffset(forIndex: 0) }
-        let lo = settledOffset(forIndex: n - 1)
-        let hi = settledOffset(forIndex: 0)
+        guard n > 1 else { return settledPhysical(0) }
+        let lo = settledPhysical(3 * n - 1)
+        let hi = settledPhysical(0)
         return min(max(x, lo), hi)
     }
 
-    private func nearestIndex(toOffset offset: CGFloat) -> Int {
+    private func nearestPhysical(toOffset offset: CGFloat) -> Int {
         let n = games.count
         var best = 0
         var bestDist = CGFloat.greatestFiniteMagnitude
-        for i in 0..<n {
-            let d = abs(offset - settledOffset(forIndex: i))
+        for p in 0 ..< (3 * n) {
+            let d = abs(offset - settledPhysical(p))
             if d < bestDist {
                 bestDist = d
-                best = i
+                best = p
             }
         }
         return best
@@ -149,9 +181,9 @@ private struct MiniGamePhoneSnapCarousel: View {
         viewportWidth > 8 ? viewportWidth : max(200, cardWidth + sideInset * 2)
     }
 
-    private func scale(forCardIndex index: Int) -> CGFloat {
+    private func scale(forPhysicalIndex physical: Int) -> CGFloat {
         let minS = CarouselLayout.neighborVisualScale
-        let cardMid = sideInset + CGFloat(index) * slot + cardWidth / 2 + scrollOffset
+        let cardMid = sideInset + CGFloat(physical) * slot + cardWidth / 2 + scrollOffset
         let vpMid = effectiveViewportWidthForScale() / 2
         let normalized = abs(cardMid - vpMid) / max(slot, 1)
         let focused = max(0, min(1, 1 - normalized))
@@ -162,8 +194,7 @@ private struct MiniGamePhoneSnapCarousel: View {
         .interpolatingSpring(stiffness: 290, damping: 29)
     }
 
-    /// Projects predicted travel from the drag gesture, then clamps fast flicks to one column.
-    private func resolveSnapTarget(after gesture: DragGesture.Value) -> Int {
+    private func resolveSnapTargetPhysical(after gesture: DragGesture.Value) -> Int {
         let n = games.count
         let travelDeltaW = gesture.predictedEndTranslation.width - gesture.translation.width
         let travelDeltaH = gesture.predictedEndTranslation.height - gesture.translation.height
@@ -172,17 +203,40 @@ private struct MiniGamePhoneSnapCarousel: View {
             dragStartScrollOffset + gesture.translation.width + travelDeltaW * CarouselLayout.carouselVelocityProjectionFactor / 220
         )
 
-        var target = nearestIndex(toOffset: projectedOffset)
+        var target = nearestPhysical(toOffset: projectedOffset)
         let fast = projectedStretch >= CarouselLayout.carouselPredictedStretchThreshold
         if fast {
-            target = min(max(target, dragStartIndex - 1), dragStartIndex + 1)
-            target = min(max(target, 0), n - 1)
+            target = min(max(target, dragStartPhysical - 1), dragStartPhysical + 1)
+            target = min(max(target, 0), 3 * n - 1)
         }
         return target
     }
 
+    private func applyInfiniteWrapIfNeeded(afterLandingOn targetPhysical: Int) {
+        let n = games.count
+        guard n > 1 else { return }
+
+        Task { @MainActor in
+            let destination: CGFloat?
+            if targetPhysical < n {
+                destination = settledPhysical(targetPhysical + n)
+            } else if targetPhysical >= 2 * n {
+                destination = settledPhysical(targetPhysical - n)
+            } else {
+                destination = nil
+            }
+            guard let destination else { return }
+            var t = Transaction()
+            t.disablesAnimations = true
+            withTransaction(t) {
+                scrollOffset = clampedOffset(destination)
+            }
+        }
+    }
+
     private func scheduleCardSelectionSuppressionReset() {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 350_000_000)
             suppressCardSelection = false
         }
     }
@@ -195,7 +249,7 @@ private struct MiniGamePhoneSnapCarousel: View {
                 if !isDragging {
                     isDragging = true
                     dragStartScrollOffset = scrollOffset
-                    dragStartIndex = nearestIndex(toOffset: scrollOffset)
+                    dragStartPhysical = nearestPhysical(toOffset: scrollOffset)
                     suppressCardSelection = true
                 }
                 scrollOffset = clampedOffset(dragStartScrollOffset + value.translation.width)
@@ -209,21 +263,22 @@ private struct MiniGamePhoneSnapCarousel: View {
                 guard isDragging || abs(value.translation.width) >= 14 else { return }
                 guard abs(value.translation.width) >= abs(value.translation.height) * 0.55 else { return }
 
-                let targetIdx = resolveSnapTarget(after: value)
+                let targetPhysical = resolveSnapTargetPhysical(after: value)
                 withAnimation(snapSpring()) {
-                    scrollOffset = settledOffset(forIndex: targetIdx)
+                    scrollOffset = settledPhysical(targetPhysical)
                 }
+                applyInfiniteWrapIfNeeded(afterLandingOn: targetPhysical)
             }
 
         HStack(spacing: gap) {
-            ForEach(Array(games.enumerated()), id: \.element.id) { index, game in
-                GameCoverCardView(game: game) {
+            ForEach(tiles) { tile in
+                GameCoverCardView(game: tile.game, borderStrokeColor: cardBorderStrokeColor) {
                     guard !suppressCardSelection else { return }
-                    onSelect(game)
+                    onSelect(tile.game)
                 }
                 .frame(width: cardWidth, height: cardHeight)
                 .padding(.vertical, CarouselLayout.verticalCardBleed)
-                .scaleEffect(scale(forCardIndex: index))
+                .scaleEffect(scale(forPhysicalIndex: tile.physicalIndex))
             }
         }
         .padding(.horizontal, sideInset)
@@ -233,21 +288,20 @@ private struct MiniGamePhoneSnapCarousel: View {
         .contentShape(Rectangle())
         .simultaneousGesture(drag)
         .onAppear {
-            guard viewportWidth > 8 else { return }
+            guard viewportWidth > 8, games.count > 1 else { return }
             if !hasSyncedInitialOffset {
-                scrollOffset = settledOffset(forIndex: 0)
+                scrollOffset = settledPhysical(games.count)
                 hasSyncedInitialOffset = true
             }
         }
         .onChange(of: gamesSignature) { _ in
-            guard viewportWidth > 8 else { return }
-            let idx = min(max(nearestIndex(toOffset: scrollOffset), 0), games.count - 1)
-            scrollOffset = settledOffset(forIndex: idx)
+            guard viewportWidth > 8, games.count > 1 else { return }
+            scrollOffset = settledPhysical(games.count)
         }
         .onChange(of: viewportWidth) { _ in
-            guard viewportWidth > 8 else { return }
-            let idx = min(max(nearestIndex(toOffset: scrollOffset), 0), games.count - 1)
-            scrollOffset = settledOffset(forIndex: idx)
+            guard viewportWidth > 8, games.count > 1 else { return }
+            let logical = nearestPhysical(toOffset: scrollOffset) % games.count
+            scrollOffset = clampedOffset(settledPhysical(games.count + logical))
         }
     }
 }
