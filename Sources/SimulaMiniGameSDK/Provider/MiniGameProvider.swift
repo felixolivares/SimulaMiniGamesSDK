@@ -19,7 +19,7 @@ public final class MiniGameProvider: ObservableObject {
 
     /// - Parameters:
     ///   - apiKey: Publisher API key (`Authorization: Bearer`).
-    ///   - devMode: Mirrors React `SimulaProvider` devMode for session creation.
+    ///   - devMode: Mirrors React `SimulaProvider` **`devMode`** for session **`createSession`** and the playable **`widget/shell`** (**`dev=true`** skips all in-shell **`tude.refreshAdsViaDivMappings`** calls, so the top banner slot renders empty/black).
     public init(apiKey: String, devMode: Bool = false) {
         self.apiKey = apiKey
         self.devMode = devMode

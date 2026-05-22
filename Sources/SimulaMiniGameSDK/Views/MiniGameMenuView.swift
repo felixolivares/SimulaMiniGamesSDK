@@ -4,7 +4,13 @@ import SwiftUI
 import UIKit
 #endif
 
-/// Native SwiftUI port of the React **`MiniGameMenu`**: catalogue, playable **`WKWebView`**, then a full-screen ad overlay with 5 s countdown when the user taps **X** to exit ( **`onGameClose`** after the gated dismiss **X** ).
+/// Native SwiftUI port of the React **`MiniGameMenu`**: catalogue, playable **`WKWebView`** (via **`/widget/shell`** like **`GameIframe`**), then a full-screen ad overlay with 5 s countdown when the user taps **X** to exit ( **`onGameClose`** after the gated dismiss **X** ).
+///
+/// ## Top banner (Aditude)
+/// The shell loads **`https://htlbid.com/v3/<domain>/htlbid.js`**. Pass your site hostname via **`publisherAdDomain`** (same idea as web **`window.location.hostname`**). **`MiniGameProvider.devMode == true`** maps to **`dev=true`** on the shell document, which **skips all in-shell ad refreshes** (empty black **50 px** band).
+///
+/// ## Ad click-through (**`onDestinationOpen`**)
+/// In **`WKWebView`**, creatives that **`window.open`** / use **`target="_blank"`** are dropped unless the host adopts **`WKUIDelegate`**; we open **`http`/`https`** in Safari (`UIApplication.shared.open`) instead of **`load`** on the embedded web view so **`/widget/shell`** stays intact. **`onDestinationOpen`** also fires for same-frame **`http`/`https`** link activations (**`navigationType`** **`.linkActivated`**) inside the playable or exit interstitial web views — custom URL schemes / JS redirects without link semantics may still not surface here until a future bridge observes **`postMessage`** from the iframe stack.
 public struct MiniGameMenuView: View {
 
     public typealias NavigationKind = MiniGameNavigationKind
@@ -26,10 +32,21 @@ public struct MiniGameMenuView: View {
     private let entryPoint: String?
     private let delegateCharacterInGame: Bool
 
+    /// Whether the playable surface should mirror web **`MiniGameMenu` `showBanner`** (passed into **`widget/shell`** as **`show_banner`**).
+    private let showBanner: Bool
+    /// Hostname for **`widget/shell`'s **`domain`** query (**`https://htlbid.com/v3/<domain>/htlbid.js`**).
+    /// Pass your registered property (same idea as web **`window.location.hostname`**).
+    /// **`nil`** skips the playable **`iframe_url`** host unless it belongs to **`coolaigames.com`** (CDN hosts alone will not work).
+    private let publisherAdDomain: String?
+
     /// Fires when the playable **`iframe_url`** is displayed (after selection, before any exit ad).
     private let onGameOpen: ((String, String) -> Void)?
     /// Fires after the gated exit interstitial is dismissed and the overlay closes.
     private let onGameClose: ((String, String) -> Void)?
+    /// Fires once after the **`/widget/shell`** document finishes loading in the playable **`WKWebView`** while the catalogue game is mounted.
+    private let onImpression: ((MiniGameShellImpressionContext) -> Void)?
+    /// User-activated navigation to **`http`/`https`** from in-web-view ads / creatives (same-frame links notified here; **`window.open`/`_blank`** opens Safari and notifies here too).
+    private let onDestinationOpen: ((URL) -> Void)?
 
     private var appliedTheme: MiniGameTheme {
         baseTheme.applying(themeOverrides)
@@ -87,8 +104,12 @@ public struct MiniGameMenuView: View {
         conversationId: String? = nil,
         entryPoint: String? = nil,
         delegateCharacterInGame: Bool = true,
+        showBanner: Bool = true,
+        publisherAdDomain: String? = nil,
         onGameOpen: ((String, String) -> Void)? = nil,
-        onGameClose: ((String, String) -> Void)? = nil
+        onGameClose: ((String, String) -> Void)? = nil,
+        onImpression: ((MiniGameShellImpressionContext) -> Void)? = nil,
+        onDestinationOpen: ((URL) -> Void)? = nil
     ) {
         self._provider = ObservedObject(wrappedValue: provider)
         self._isPresented = isPresented
@@ -104,8 +125,12 @@ public struct MiniGameMenuView: View {
         self.conversationId = conversationId
         self.entryPoint = entryPoint
         self.delegateCharacterInGame = delegateCharacterInGame
+        self.showBanner = showBanner
+        self.publisherAdDomain = publisherAdDomain
         self.onGameOpen = onGameOpen
         self.onGameClose = onGameClose
+        self.onImpression = onImpression
+        self.onDestinationOpen = onDestinationOpen
     }
 
     public var body: some View {
@@ -231,8 +256,12 @@ public struct MiniGameMenuView: View {
 
             ZStack {
                 Group {
-                    if experiencePlayableUnderlaysChrome, let payload = playPayload {
-                        playableWebRegion(totalHeight: contentArea - 32, iframeURL: payload.iframeURL)
+                    if experiencePlayableUnderlaysChrome, let payload = playPayload, let game = focusedGame {
+                        playableWebRegion(
+                            totalHeight: contentArea - 32,
+                            playablePayload: payload,
+                            focusedGame: game
+                        )
                             .allowsHitTesting(menuFlow == .showingPlayable)
                     }
 
@@ -395,14 +424,38 @@ public struct MiniGameMenuView: View {
         menuFlow == .fetchingInterstitial ? "Fetching advertisement…" : "Preparing playable experience…"
     }
 
-    private func playableWebRegion(totalHeight: CGFloat, iframeURL: URL) -> some View {
-        SimulaIframeWebView(url: iframeURL)
-            .frame(height: playableChromeHeight(for: totalHeight))
-            .clipShape(RoundedRectangle(cornerRadius: appliedTheme.iconCornerRadius, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: appliedTheme.iconCornerRadius, style: .continuous)
-                    .stroke(appliedTheme.cardHighlightStrokeColor, lineWidth: 1)
-            )
+    private func playableWebRegion(
+        totalHeight: CGFloat,
+        playablePayload: InitMinigameResult,
+        focusedGame: GameData
+    ) -> some View {
+        let shellURL = MiniGameWidgetShellURL.gameShellURL(
+            gamePlayableURL: playablePayload.iframeURL,
+            publisherAdDomain: publisherAdDomain,
+            showBanner: showBanner,
+            devMode: provider.devMode
+        )
+        return SimulaIframeWebView(
+            url: shellURL,
+            onPrimaryDocumentLoad: {
+                let impression = MiniGameShellImpressionContext(
+                    placement: "widget_shell",
+                    gameTypeId: focusedGame.id,
+                    gameName: focusedGame.name,
+                    serveId: playablePayload.serveId,
+                    adId: playablePayload.adId,
+                    showBanner: showBanner
+                )
+                onImpression?(impression)
+            },
+            onDestinationOpen: onDestinationOpen
+        )
+        .frame(height: playableChromeHeight(for: totalHeight))
+        .clipShape(RoundedRectangle(cornerRadius: appliedTheme.iconCornerRadius, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: appliedTheme.iconCornerRadius, style: .continuous)
+                .stroke(appliedTheme.cardHighlightStrokeColor, lineWidth: 1)
+        )
     }
 
     private func gatedInterstitialChrome(contentHeight: CGFloat) -> some View {
@@ -431,7 +484,7 @@ public struct MiniGameMenuView: View {
 
         Group {
             if let interstitialURL {
-                SimulaIframeWebView(url: interstitialURL)
+                SimulaIframeWebView(url: interstitialURL, onDestinationOpen: onDestinationOpen)
                     .background(Color.white)
                     .clipShape(Rectangle())
             } else {

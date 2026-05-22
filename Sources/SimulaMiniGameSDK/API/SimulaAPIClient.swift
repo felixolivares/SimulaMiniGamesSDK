@@ -85,6 +85,10 @@ struct SimulaAPIClient: Sendable {
             gamesList = []
         }
 
+#if DEBUG
+        logCatalogGamesForDebugging(gamesList: gamesList)
+#endif
+
         let games: [GameData] = gamesList.compactMap { game in
             guard let id = game["id"] as? String, let name = game["name"] as? String else { return nil }
             let description = (game["description"] as? String) ?? ""
@@ -101,8 +105,29 @@ struct SimulaAPIClient: Sendable {
             )
         }
 
+#if DEBUG
+        print("[SimulaMiniGameSDK] catalog mapped GameData (\(games.count)): \(games)")
+#endif
+
         return CatalogResponse(menuId: menuId, games: games)
     }
+
+#if DEBUG
+    /// Logs **`catalogv2`** game entries as delivered by the API (before **`GameData`** mapping).
+    private func logCatalogGamesForDebugging(gamesList: [[String: Any]]) {
+        guard !gamesList.isEmpty else {
+            print("[SimulaMiniGameSDK] catalog raw game objects: []")
+            return
+        }
+        if JSONSerialization.isValidJSONObject(gamesList),
+           let bytes = try? JSONSerialization.data(withJSONObject: gamesList, options: [.prettyPrinted]),
+           let text = String(data: bytes, encoding: .utf8) {
+            print("[SimulaMiniGameSDK] catalog raw game objects (\(gamesList.count)):\n\(text)")
+        } else {
+            print("[SimulaMiniGameSDK] catalog raw game objects (non-JSON-serializable \(gamesList.count) rows): \(gamesList)")
+        }
+    }
+#endif
 
     func trackMenuGameClick(menuId: String, gameName: String, apiKey: String) async {
         var request = URLRequest(url: APIConstants.baseURL.appendingPathComponent("minigames/menu/track/click"))
