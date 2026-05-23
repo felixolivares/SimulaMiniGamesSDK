@@ -85,48 +85,85 @@ struct SimulaAPIClient: Sendable {
             gamesList = []
         }
 
-#if DEBUG
-        logCatalogGamesForDebugging(gamesList: gamesList)
-#endif
-
-        let games: [GameData] = gamesList.compactMap { game in
+        // Optional **`destination_*`** hint; if omitted or unrecognized, **`adDestinationKind`** is inferred from URL-ish row fields (**`url`**, **`cta_url`**, …): **`apps.apple.com`** → **`appStore`**, other **`http`/`https`** → **`web`**.
+        let games: [GameData] = gamesList.enumerated().compactMap { index, game in
             guard let id = game["id"] as? String, let name = game["name"] as? String else { return nil }
             let description = (game["description"] as? String) ?? ""
             let icon = (game["icon"] as? String).flatMap { URL(string: $0) }
             let gifCover = (game["gif_cover"] as? String).flatMap { URL(string: $0) }
             let fallback = game["iconFallback"] as? String ?? game["icon_fallback"] as? String
+            let destRaw =
+                game["destination_type"] as? String ?? game["destinationType"] as? String
+                    ?? game["ad_destination"] as? String ?? game["destination"] as? String
+            var destKind = MinigameAdDestinationKind.parsingAPIValue(destRaw)
+            if destKind == .unknown {
+                let inferred = MinigameAdDestinationKind.inferringFromCatalogRowURLs(
+                    MinigameAdDestinationKind.catalogRowURLCandidates(from: game)
+                )
+                if inferred != .unknown {
+                    destKind = inferred
+                }
+            }
+#if DEBUG
+            logCatalogRowKeysIfDestinationFieldsPresent(rowIndex: index, gameId: id, row: game)
+#endif
             return GameData(
                 id: id,
                 name: name,
                 iconUrl: icon,
                 description: description,
                 iconFallback: fallback,
-                gifCover: gifCover
+                gifCover: gifCover,
+                adDestinationKind: destKind
             )
         }
 
 #if DEBUG
-        print("[SimulaMiniGameSDK] catalog mapped GameData (\(games.count)): \(games)")
+        logMappedGameDataForDebugging(games)
 #endif
 
         return CatalogResponse(menuId: menuId, games: games)
     }
 
 #if DEBUG
-    /// Logs **`catalogv2`** game entries as delivered by the API (before **`GameData`** mapping).
-    private func logCatalogGamesForDebugging(gamesList: [[String: Any]]) {
-        guard !gamesList.isEmpty else {
-            print("[SimulaMiniGameSDK] catalog raw game objects: []")
+    private func logMappedGameDataForDebugging(_ games: [GameData]) {
+        print("[SimulaMiniGameSDK] catalog mapped → GameData count=\(games.count)")
+        guard !games.isEmpty else {
+            print("[SimulaMiniGameSDK]   (empty)")
             return
         }
-        if JSONSerialization.isValidJSONObject(gamesList),
-           let bytes = try? JSONSerialization.data(withJSONObject: gamesList, options: [.prettyPrinted]),
-           let text = String(data: bytes, encoding: .utf8) {
-            print("[SimulaMiniGameSDK] catalog raw game objects (\(gamesList.count)):\n\(text)")
-        } else {
-            print("[SimulaMiniGameSDK] catalog raw game objects (non-JSON-serializable \(gamesList.count) rows): \(gamesList)")
+        let hinted = games.filter { $0.adDestinationKind != .unknown }.count
+        print(
+            "[SimulaMiniGameSDK] Rows with mapped adDestinationKind ≠ unknown: \(hinted) / \(games.count)."
+        )
+        for (index, game) in games.enumerated() {
+            let icon = game.iconUrl?.absoluteString ?? "nil"
+            let gif = game.gifCover?.absoluteString ?? "nil"
+            let fb = game.iconFallback ?? "nil"
+            let snippet = String(game.description.prefix(120)).replacingOccurrences(of: "\n", with: "\\n")
+            let ellipsis = game.description.count > 120 ? "…" : ""
+            print(
+                "[SimulaMiniGameSDK] [\(index)] GameData id=\(game.id) name=\(game.name) adDestinationKind=\(game.adDestinationKind.rawValue) descriptionLen=\(game.description.count)"
+            )
+            print("[SimulaMiniGameSDK]     descriptionSnippet=\"\(snippet)\(ellipsis)\"")
+            print("[SimulaMiniGameSDK]     icon=\(icon) gifCover=\(gif) iconFallback=\(fb)")
         }
     }
+
+    private func logCatalogRowKeysIfDestinationFieldsPresent(rowIndex: Int, gameId: String, row: [String: Any]) {
+        let needles = ["destination_type", "destinationType", "ad_destination", "destination"]
+        var hits: [(String, String)] = []
+        for key in needles {
+            guard let raw = row[key] else { continue }
+            hits.append((key, String(describing: raw)))
+        }
+        guard !hits.isEmpty else {
+            return
+        }
+        let summary = hits.map { "\($0.0)=\($0.1)" }.joined(separator: ", ")
+        print("[SimulaMiniGameSDK] catalogv2[\(rowIndex)] id=\(gameId): destination-ish payload fields → \(summary)")
+    }
+
 #endif
 
     func trackMenuGameClick(menuId: String, gameName: String, apiKey: String) async {

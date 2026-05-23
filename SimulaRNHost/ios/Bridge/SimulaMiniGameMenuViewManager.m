@@ -17,6 +17,8 @@ RCT_EXPORT_VIEW_PROPERTY(maxGamesToShow, NSNumber)
 RCT_EXPORT_VIEW_PROPERTY(navigationKind, NSString)
 RCT_EXPORT_VIEW_PROPERTY(delegateCharacterInGame, BOOL)
 
+RCT_EXPORT_VIEW_PROPERTY(theme, NSDictionary)
+
 RCT_EXPORT_VIEW_PROPERTY(onGameOpen, RCTDirectEventBlock)
 RCT_EXPORT_VIEW_PROPERTY(onGameClose, RCTDirectEventBlock)
 RCT_EXPORT_VIEW_PROPERTY(onImpression, RCTDirectEventBlock)

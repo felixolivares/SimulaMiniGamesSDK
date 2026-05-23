@@ -27,6 +27,10 @@ export type MiniGameImpressionEvent = NativeSyntheticEvent<{
 
 export type MiniGameDestinationEvent = NativeSyntheticEvent<{
   url: string;
+  /** Catalog hint (`GameData`), or inferred from the tapped **`url`** when the catalog row lacked it (**`apps.apple.com`** → **`appStore`**). */
+  catalogDestinationHint?: 'appStore' | 'web' | 'unknown';
+  /** Present when **`MiniGameMenuView`** attached a playable row (interstitial/playable taps). */
+  focusedCatalogGameId?: string;
 }>;
 
 export type MiniGamePresentedEvent = NativeSyntheticEvent<{
@@ -34,6 +38,36 @@ export type MiniGamePresentedEvent = NativeSyntheticEvent<{
 }>;
 
 export type MiniGameNavigationKindRN = 'dot' | 'arrow' | 'pagination';
+
+/**
+ * Mirrors **`MiniGameTheme`** (**`simula-ad-sdk`** / web) plus optional native aliases (**`experienceTitleFontSize`**, **`catalogCardCornerRadius`**, …).
+ * Forwarded verbatim to **`MiniGameThemePatch.bridging(fromJSObject:)`** on iOS.
+ */
+export type SimulaMiniGameMenuTheme = {
+  backgroundColor?: string;
+  headerColor?: string;
+  borderColor?: string;
+  titleFont?: string;
+  secondaryFont?: string;
+  titleFontColor?: string;
+  secondaryFontColor?: string;
+  /** Hero **“Play a game with…”** typography (`catalogHeroTitlePointSize`). */
+  titleFontSize?: number;
+  /** Playable chrome toolbar title (`experienceToolbarTitlePointSize`). */
+  experienceTitleFontSize?: number;
+  /** Alias for **`experienceTitleFontSize`**. */
+  toolbarTitleFontSize?: number;
+  /** Catalog loading line / muted body / pagination baseline. */
+  secondaryFontSize?: number;
+  /** Game tile footer title (`catalogCoverTitlePointSize`). */
+  cardTitleFontSize?: number;
+  iconCornerRadius?: number;
+  /** Poster rounding (`catalogCoverCornerRadius`); **`iconCornerRadius`** still clips inlined iframe chrome. */
+  catalogCardCornerRadius?: number;
+  accentColor?: string;
+  playableHeight?: number | string;
+  playableBorderColor?: string;
+};
 
 export interface SimulaMiniGameMenuProps extends ViewProps {
   visible?: boolean;
@@ -43,6 +77,8 @@ export interface SimulaMiniGameMenuProps extends ViewProps {
   charImageURL?: string;
   showBanner?: boolean;
   publisherAdDomain?: string;
+  /** Partial theme (**` NSDictionary`**) layered over **`MiniGameTheme.default`** in SwiftUI. */
+  theme?: SimulaMiniGameMenuTheme;
   /** Catalog cap (closest of 3 / 6 / 9 supported by **`MaxGamesToShow`**). */
   maxGamesToShow?: number;
   navigationKind?: MiniGameNavigationKindRN;

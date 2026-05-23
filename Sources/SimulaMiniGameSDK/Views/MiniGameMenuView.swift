@@ -9,8 +9,8 @@ import UIKit
 /// ## Top banner (Aditude)
 /// The shell loads **`https://htlbid.com/v3/<domain>/htlbid.js`**. Pass your site hostname via **`publisherAdDomain`** (same idea as web **`window.location.hostname`**). **`MiniGameProvider.devMode == true`** maps to **`dev=true`** on the shell document, which **skips all in-shell ad refreshes** (empty black **50 px** band).
 ///
-/// ## Ad click-through (**`onDestinationOpen`**)
-/// In **`WKWebView`**, creatives that **`window.open`** / use **`target="_blank"`** are dropped unless the host adopts **`WKUIDelegate`**; we open **`http`/`https`** in Safari (`UIApplication.shared.open`) instead of **`load`** on the embedded web view so **`/widget/shell`** stays intact. **`onDestinationOpen`** also fires for same-frame **`http`/`https`** link activations (**`navigationType`** **`.linkActivated`**) inside the playable or exit interstitial web views — custom URL schemes / JS redirects without link semantics may still not surface here until a future bridge observes **`postMessage`** from the iframe stack.
+/// ## Ad click-through (**`onDestinationOpen`** / **`onAdDestinationWithContext`**)
+/// See **`relayAdClickthrough`**: default opens Safari (**`UIApplication.shared.open`**) when **`opensHTTPAdClicksInSystemSafari`** is **`true`**. For in-app **`SFSafariViewController`** / StoreKit (**`opensHTTPAdClicksInSystemSafari`** **`false`**), handle **`onAdDestinationWithContext`**. Same-frame **`http`/`https`** link activations surface here too.
 public struct MiniGameMenuView: View {
 
     public typealias NavigationKind = MiniGameNavigationKind
@@ -45,8 +45,13 @@ public struct MiniGameMenuView: View {
     private let onGameClose: ((String, String) -> Void)?
     /// Fires once after the **`/widget/shell`** document finishes loading in the playable **`WKWebView`** while the catalogue game is mounted.
     private let onImpression: ((MiniGameShellImpressionContext) -> Void)?
-    /// User-activated navigation to **`http`/`https`** from in-web-view ads / creatives (same-frame links notified here; **`window.open`/`_blank`** opens Safari and notifies here too).
+    /// User-activated navigation to **`http`/`https`** from in‑web‑view creatives.
+    /// When **`opensHTTPAdClicksInSystemSafari`** is **`false`**, the host must open the URL (**`onAdDestinationWithContext`** receives catalog **`GameData`** when a mini‑game row is mounted).
     private let onDestinationOpen: ((URL) -> Void)?
+    /// Richer sibling of **`onDestinationOpen`** (**`focusedGame`** is **`nil`** in edge cases — use URL fallbacks).
+    private let onAdDestinationWithContext: ((MiniGameAdDestinationContext) -> Void)?
+    /// When **`true`** (default), **`UIApplication.shared.open`** is used for **`window.open`** hand‑offs alongside callbacks.
+    private let opensHTTPAdClicksInSystemSafari: Bool
 
     private var appliedTheme: MiniGameTheme {
         baseTheme.applying(themeOverrides)
@@ -109,7 +114,9 @@ public struct MiniGameMenuView: View {
         onGameOpen: ((String, String) -> Void)? = nil,
         onGameClose: ((String, String) -> Void)? = nil,
         onImpression: ((MiniGameShellImpressionContext) -> Void)? = nil,
-        onDestinationOpen: ((URL) -> Void)? = nil
+        onDestinationOpen: ((URL) -> Void)? = nil,
+        opensHTTPAdClicksInSystemSafari: Bool = true,
+        onAdDestinationWithContext: ((MiniGameAdDestinationContext) -> Void)? = nil
     ) {
         self._provider = ObservedObject(wrappedValue: provider)
         self._isPresented = isPresented
@@ -131,6 +138,15 @@ public struct MiniGameMenuView: View {
         self.onGameClose = onGameClose
         self.onImpression = onImpression
         self.onDestinationOpen = onDestinationOpen
+        self.opensHTTPAdClicksInSystemSafari = opensHTTPAdClicksInSystemSafari
+        self.onAdDestinationWithContext = onAdDestinationWithContext
+    }
+
+    /// Forwards **`http`/`https`** taps to richer context first so hosts can correlate with **`catalogv2`** (**`destination_type`** or inferred URL fields on the row).
+    private func relayAdClickthrough(url: URL, focusedGame: GameData?) {
+        let context = MiniGameAdDestinationContext(url: url, focusedGame: focusedGame)
+        onAdDestinationWithContext?(context)
+        onDestinationOpen?(url)
     }
 
     public var body: some View {
@@ -311,7 +327,7 @@ public struct MiniGameMenuView: View {
     private var experienceToolbar: some View {
         HStack(alignment: .top, spacing: 12) {
             Text(experienceTitle)
-                .font(.system(size: 15, weight: .heavy, design: appliedTheme.titleFontDesign))
+                .font(.system(size: experienceToolbarTitleResolved, weight: .heavy, design: appliedTheme.titleFontDesign))
                 .foregroundStyle(appliedTheme.titleFontColor)
 
             Spacer(minLength: 4)
@@ -448,7 +464,10 @@ public struct MiniGameMenuView: View {
                 )
                 onImpression?(impression)
             },
-            onDestinationOpen: onDestinationOpen
+            onDestinationOpen: { url in
+                relayAdClickthrough(url: url, focusedGame: focusedGame)
+            },
+            opensHTTPAdClicksInSystemSafari: opensHTTPAdClicksInSystemSafari
         )
         .frame(height: playableChromeHeight(for: totalHeight))
         .clipShape(RoundedRectangle(cornerRadius: appliedTheme.iconCornerRadius, style: .continuous))
@@ -484,7 +503,13 @@ public struct MiniGameMenuView: View {
 
         Group {
             if let interstitialURL {
-                SimulaIframeWebView(url: interstitialURL, onDestinationOpen: onDestinationOpen)
+                SimulaIframeWebView(
+                    url: interstitialURL,
+                    onDestinationOpen: { url in
+                        relayAdClickthrough(url: url, focusedGame: focusedGame)
+                    },
+                    opensHTTPAdClicksInSystemSafari: opensHTTPAdClicksInSystemSafari
+                )
                     .background(Color.white)
                     .clipShape(Rectangle())
             } else {
@@ -574,11 +599,11 @@ public struct MiniGameMenuView: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 Text("Play a Game with")
-                    .font(.system(size: titleSize, weight: .black, design: appliedTheme.titleFontDesign))
+                    .font(.system(size: catalogHeroTitlePointsResolved, weight: .black, design: appliedTheme.titleFontDesign))
                     .foregroundStyle(appliedTheme.titleFontColor)
                     .tracking(-0.3)
                 Text(charName)
-                    .font(.system(size: titleSize, weight: .heavy, design: appliedTheme.titleFontDesign))
+                    .font(.system(size: catalogHeroTitlePointsResolved, weight: .heavy, design: appliedTheme.titleFontDesign))
                     .foregroundStyle(appliedTheme.titleFontColor.opacity(0.78))
                     .tracking(-0.3)
             }
@@ -587,16 +612,32 @@ public struct MiniGameMenuView: View {
         .padding(.leading, 8)
     }
 
+    private var adaptiveCatalogHeroFallbackPoints: CGFloat {
+        horizontalSizeClass == .regular ? 19 : 18
+    }
+
+    /// Overrides React **`theme.titleFontSize`** (**`catalogHeroTitlePointSize`** bridge).
+    private var catalogHeroTitlePointsResolved: CGFloat {
+        appliedTheme.catalogHeroTitlePointSize ?? adaptiveCatalogHeroFallbackPoints
+    }
+
+    /// React **`experienceTitleFontSize`**, **`toolbarTitleFontSize`**, or **`15 pt`** when hero uses SDK defaults (**`catalogHeroTitlePointSize`** omitted).
+    private var experienceToolbarTitleResolved: CGFloat {
+        if let t = appliedTheme.experienceToolbarTitlePointSize {
+            return t
+        }
+        if appliedTheme.catalogHeroTitlePointSize == nil {
+            return 15
+        }
+        return max(13, catalogHeroTitlePointsResolved - 3)
+    }
+
     private var avatarSize: CGSize {
         horizontalSizeClass == .regular ? CGSize(width: 80, height: 80) : CGSize(width: 72, height: 72)
     }
 
     private var avatarCornerOuter: CGFloat {
         horizontalSizeClass == .regular ? 24 : 16
-    }
-
-    private var titleSize: CGFloat {
-        horizontalSizeClass == .regular ? 19 : 18
     }
 
     private var avatar: some View {
@@ -685,7 +726,12 @@ public struct MiniGameMenuView: View {
                 )
                 .padding(.horizontal, isRegular ? 20 : 0)
             } else {
-                MiniGamePhoneCarouselView(games: base, cardBorderStrokeColor: appliedTheme.cardHighlightStrokeColor) { game in
+                MiniGamePhoneCarouselView(
+                    games: base,
+                    cardBorderStrokeColor: appliedTheme.cardHighlightStrokeColor,
+                    catalogCoverCornerRadius: appliedTheme.resolvedCatalogCoverCornerRadius,
+                    catalogCoverTitlePoints: appliedTheme.catalogCoverTitlePointSize ?? 17
+                ) { game in
                     Task { await selectGame(game) }
                 }
             }
@@ -704,7 +750,7 @@ public struct MiniGameMenuView: View {
                 .tint(appliedTheme.titleFontColor)
                 .scaleEffect(1.1)
             Text("Loading games...")
-                .font(.system(size: 14, design: appliedTheme.secondaryFontDesign))
+                .font(.system(size: appliedTheme.resolvedSecondaryBodyPoints, design: appliedTheme.secondaryFontDesign))
                 .foregroundStyle(appliedTheme.secondaryFontColor)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -721,7 +767,7 @@ public struct MiniGameMenuView: View {
                     .foregroundStyle(appliedTheme.secondaryFontColor.opacity(0.45))
             }
             Text("No games are available to play right now. Please check back later!")
-                .font(.system(size: 14, design: appliedTheme.secondaryFontDesign))
+                .font(.system(size: appliedTheme.resolvedSecondaryBodyPoints, design: appliedTheme.secondaryFontDesign))
                 .multilineTextAlignment(.center)
                 .foregroundStyle(appliedTheme.secondaryFontColor)
                 .padding(.horizontal, 24)

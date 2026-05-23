@@ -28,7 +28,12 @@ struct MiniGameTabletGridView: View {
                     spacing: 24
                 ) {
                     ForEach(slice, id: \.id) { game in
-                        GameCoverCardView(game: game, borderStrokeColor: theme.cardHighlightStrokeColor) {
+                        GameCoverCardView(
+                            game: game,
+                            cornerRadius: theme.resolvedCatalogCoverCornerRadius,
+                            gameCoverTitlePoints: theme.catalogCoverTitlePointSize ?? 17,
+                            borderStrokeColor: theme.cardHighlightStrokeColor
+                        ) {
                             onSelect(game)
                         }
                         .frame(width: cardWidth, height: cardHeight)
@@ -102,7 +107,7 @@ struct MiniGameTabletGridView: View {
                 goToPage(currentPage - 1, totalPages: totalPages)
             } label: {
                 Image(systemName: "chevron.left")
-                    .font(.system(size: 18, weight: .semibold))
+                    .font(.system(size: max(theme.resolvedPaginationLabelPoints + 2, 18), weight: .semibold))
                     .foregroundStyle(theme.accentColor)
             }
             .accessibilityLabel(Text("Previous page"))
@@ -111,7 +116,7 @@ struct MiniGameTabletGridView: View {
                 goToPage(currentPage + 1, totalPages: totalPages)
             } label: {
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 18, weight: .semibold))
+                    .font(.system(size: max(theme.resolvedPaginationLabelPoints + 2, 18), weight: .semibold))
                     .foregroundStyle(theme.accentColor)
             }
             .accessibilityLabel(Text("Next page"))
@@ -124,17 +129,17 @@ struct MiniGameTabletGridView: View {
                 goToPage(currentPage - 1, totalPages: totalPages)
             } label: {
                 Text("Prev")
-                    .font(.system(size: 16, weight: .bold))
+                    .font(.system(size: theme.resolvedPaginationLabelPoints, weight: .bold))
                     .foregroundStyle(theme.accentColor)
             }
             Text("\(currentPage + 1) / \(totalPages)")
-                .font(.system(size: 16, weight: .semibold))
+                .font(.system(size: theme.resolvedPaginationLabelPoints, weight: .semibold))
                 .foregroundStyle(theme.secondaryFontColor)
             circleNavButton(disabled: currentPage >= totalPages - 1, extraWidth: true) {
                 goToPage(currentPage + 1, totalPages: totalPages)
             } label: {
                 Text("Next")
-                    .font(.system(size: 16, weight: .bold))
+                    .font(.system(size: theme.resolvedPaginationLabelPoints, weight: .bold))
                     .foregroundStyle(theme.accentColor)
             }
         }

@@ -14,4 +14,7 @@ RCT_EXTERN_METHOD(bootstrapSession:(RCTPromiseResolveBlock)resolve
 RCT_EXTERN_METHOD(loadCatalog:(RCTPromiseResolveBlock)resolve
                   reject:(RCTPromiseRejectBlock)reject)
 
+RCT_EXTERN_METHOD(debugPeekCatalogMappedSummary:(RCTPromiseResolveBlock)resolve
+                  reject:(RCTPromiseRejectBlock)reject)
+
 @end

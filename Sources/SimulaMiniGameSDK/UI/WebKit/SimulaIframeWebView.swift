@@ -15,17 +15,21 @@ public struct SimulaIframeWebView: UIViewRepresentable {
     let url: URL
     /// Invoked once after the **first** successful main-frame load (used for publisher **`onImpression`** on the **`/widget/shell`** host).
     var onPrimaryDocumentLoad: (() -> Void)?
-    /// User-activated navigation to an **`http`/`https`** URL (in-frame link and pop-up / **`window.open`** paths that we hand off to Safari).
+    /// User-activated navigation to an **`http`/`https`** URL (in-frame link + **`window.open`** hand-offs).
     var onDestinationOpen: ((URL) -> Void)?
+    /// When **`true`**, complements callbacks with **`UIApplication.shared.open`** (external Safari). **`false`** is for **`SFSafariViewController`** / StoreKit presenters.
+    var opensHTTPAdClicksInSystemSafari: Bool = true
 
     public init(
         url: URL,
         onPrimaryDocumentLoad: (() -> Void)? = nil,
-        onDestinationOpen: ((URL) -> Void)? = nil
+        onDestinationOpen: ((URL) -> Void)? = nil,
+        opensHTTPAdClicksInSystemSafari: Bool = true
     ) {
         self.url = url
         self.onPrimaryDocumentLoad = onPrimaryDocumentLoad
         self.onDestinationOpen = onDestinationOpen
+        self.opensHTTPAdClicksInSystemSafari = opensHTTPAdClicksInSystemSafari
     }
 
     public func makeCoordinator() -> Coordinator {
@@ -64,6 +68,7 @@ public struct SimulaIframeWebView: UIViewRepresentable {
 
         context.coordinator.onPrimaryDocumentLoad = onPrimaryDocumentLoad
         context.coordinator.onDestinationOpen = onDestinationOpen
+        context.coordinator.opensHTTPAdClicksInSystemSafari = opensHTTPAdClicksInSystemSafari
         context.coordinator.resetForNewURL(url)
         webView.load(URLRequest(url: url))
 
@@ -73,6 +78,7 @@ public struct SimulaIframeWebView: UIViewRepresentable {
     public func updateUIView(_ uiView: WKWebView, context: Context) {
         context.coordinator.onPrimaryDocumentLoad = onPrimaryDocumentLoad
         context.coordinator.onDestinationOpen = onDestinationOpen
+        context.coordinator.opensHTTPAdClicksInSystemSafari = opensHTTPAdClicksInSystemSafari
         if context.coordinator.lastLoaded != url {
             context.coordinator.resetForNewURL(url)
             uiView.load(URLRequest(url: url))
@@ -83,6 +89,7 @@ public struct SimulaIframeWebView: UIViewRepresentable {
         fileprivate(set) var lastLoaded: URL?
         var onPrimaryDocumentLoad: (() -> Void)?
         var onDestinationOpen: ((URL) -> Void)?
+        var opensHTTPAdClicksInSystemSafari = true
         private var didFirePrimaryLoad = false
 
         func resetForNewURL(_ newURL: URL) {
@@ -123,7 +130,9 @@ public struct SimulaIframeWebView: UIViewRepresentable {
             guard scheme == "http" || scheme == "https" else { return nil }
 #if canImport(UIKit)
             onDestinationOpen?(url)
-            UIApplication.shared.open(url, options: [:], completionHandler: nil)
+            if opensHTTPAdClicksInSystemSafari {
+                UIApplication.shared.open(url, options: [:], completionHandler: nil)
+            }
 #endif
             return nil
         }

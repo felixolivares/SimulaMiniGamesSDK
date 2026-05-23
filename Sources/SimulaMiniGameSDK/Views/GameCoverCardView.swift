@@ -18,9 +18,18 @@ struct GameCoverCardView: View {
 
     private let fallbackEmojis = ["🎲", "🎮", "🎯", "🧩"]
 
-    init(game: GameData, cornerRadius: CGFloat = 18, borderStrokeColor: Color = Color(red: 120 / 255, green: 200 / 255, blue: 255 / 255).opacity(0.1), onSelect: @escaping () -> Void) {
+    let gameCoverTitlePoints: CGFloat
+
+    init(
+        game: GameData,
+        cornerRadius: CGFloat = 18,
+        gameCoverTitlePoints: CGFloat = 17,
+        borderStrokeColor: Color = Color(red: 120 / 255, green: 200 / 255, blue: 255 / 255).opacity(0.1),
+        onSelect: @escaping () -> Void
+    ) {
         self.game = game
         self.cornerRadius = cornerRadius
+        self.gameCoverTitlePoints = gameCoverTitlePoints
         self.borderStrokeColor = borderStrokeColor
         self.onSelect = onSelect
     }
@@ -52,7 +61,7 @@ struct GameCoverCardView: View {
                 )
 
                 Text(game.name)
-                    .font(.system(size: 17, weight: .heavy))
+                    .font(.system(size: gameCoverTitlePoints, weight: .heavy))
                     .foregroundColor(.white)
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)

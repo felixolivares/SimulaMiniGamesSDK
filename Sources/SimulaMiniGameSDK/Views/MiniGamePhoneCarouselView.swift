@@ -26,15 +26,22 @@ enum CarouselLayout {
 struct MiniGamePhoneCarouselView: View {
     let games: [GameData]
     let cardBorderStrokeColor: Color
+    /// Clips **`GameCoverCardView`** rounding (mirrors React **`catalogCardCornerRadius`** / **`iconCornerRadius`** bridge).
+    let catalogCoverCornerRadius: CGFloat
+    let catalogCoverTitlePoints: CGFloat
     let onSelect: (GameData) -> Void
 
     init(
         games: [GameData],
         cardBorderStrokeColor: Color = Color(red: 120 / 255, green: 200 / 255, blue: 255 / 255).opacity(0.1),
+        catalogCoverCornerRadius: CGFloat,
+        catalogCoverTitlePoints: CGFloat,
         onSelect: @escaping (GameData) -> Void
     ) {
         self.games = games
         self.cardBorderStrokeColor = cardBorderStrokeColor
+        self.catalogCoverCornerRadius = catalogCoverCornerRadius
+        self.catalogCoverTitlePoints = catalogCoverTitlePoints
         self.onSelect = onSelect
     }
 
@@ -76,7 +83,12 @@ struct MiniGamePhoneCarouselView: View {
     }
 
     private func soloCard(_ game: GameData, cardWidth: CGFloat, cardHeight: CGFloat, viewportWidth: CGFloat) -> some View {
-        GameCoverCardView(game: game, borderStrokeColor: cardBorderStrokeColor) {
+        GameCoverCardView(
+            game: game,
+            cornerRadius: catalogCoverCornerRadius,
+            gameCoverTitlePoints: catalogCoverTitlePoints,
+            borderStrokeColor: cardBorderStrokeColor
+        ) {
             onSelect(game)
         }
         .frame(width: cardWidth, height: cardHeight)
@@ -94,6 +106,8 @@ struct MiniGamePhoneCarouselView: View {
         return MiniGameInfiniteCoverCarousel(
             games: games,
             cardBorderStrokeColor: cardBorderStrokeColor,
+            catalogCoverCornerRadius: catalogCoverCornerRadius,
+            catalogCoverTitlePoints: catalogCoverTitlePoints,
             viewportWidth: max(8, viewportWidth),
             cardWidth: cardWidth,
             cardHeight: cardHeight,
@@ -110,6 +124,8 @@ struct MiniGamePhoneCarouselView: View {
 private struct MiniGameInfiniteCoverCarousel: View {
     let games: [GameData]
     let cardBorderStrokeColor: Color
+    let catalogCoverCornerRadius: CGFloat
+    let catalogCoverTitlePoints: CGFloat
     let viewportWidth: CGFloat
     let cardWidth: CGFloat
     let cardHeight: CGFloat
@@ -272,7 +288,12 @@ private struct MiniGameInfiniteCoverCarousel: View {
 
         HStack(spacing: gap) {
             ForEach(tiles) { tile in
-                GameCoverCardView(game: tile.game, borderStrokeColor: cardBorderStrokeColor) {
+                GameCoverCardView(
+                    game: tile.game,
+                    cornerRadius: catalogCoverCornerRadius,
+                    gameCoverTitlePoints: catalogCoverTitlePoints,
+                    borderStrokeColor: cardBorderStrokeColor
+                ) {
                     guard !suppressCardSelection else { return }
                     onSelect(tile.game)
                 }

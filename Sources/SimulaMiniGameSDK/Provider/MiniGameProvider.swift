@@ -68,6 +68,23 @@ public final class MiniGameProvider: ObservableObject {
         }
     }
 
+    /// Text snapshot of **`catalog`** mapped to **`[GameData]`** for **`console.log`** via the RN **`SimulaAdSDK.debugPeekCatalogSummary`** shim.
+    ///
+    /// Prefer this over **`print`** from Pods: Xcode shows native **`stdout`**; Metro only receives JavaScript logs.
+    public func debugPeekCatalogMappedSummary() -> String {
+        guard let catalog else {
+            if let catalogError {
+                return "[SimulaMiniGameSDK] catalog is nil (load failed): \(catalogError.localizedDescription)"
+            }
+            return "[SimulaMiniGameSDK] catalog is nil — call **`loadCatalog`** first."
+        }
+        var lines = [
+            "[SimulaMiniGameSDK] mapped catalog menu_id=\"\(catalog.menuId)\" gameCount=\(catalog.games.count) (Swift `print` in SimulaMiniGameSDK also logs to Xcode; use this string in JS for Metro)."
+        ]
+        lines += catalog.games.enumerated().map { "[SimulaMiniGameSDK] [\($0.offset)] \($0.element.debugMappedCatalogSummaryLine)" }
+        return lines.joined(separator: "\n")
+    }
+
     /// Best-effort menu click beacon (matches React `trackMenuGameClick`).
     public func notifyMenuGameSelected(menuId: String, gameName: String) async {
         await api.trackMenuGameClick(menuId: menuId, gameName: gameName, apiKey: apiKey)

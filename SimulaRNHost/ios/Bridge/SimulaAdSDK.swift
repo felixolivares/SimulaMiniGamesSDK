@@ -40,4 +40,16 @@ final class SimulaAdSDK: NSObject {
             resolve(NSNull())
         }
     }
+
+    /// Bridges mapped **`GameData`** to Metro — native **`Swift.print`** elsewhere never appears in Metro.
+    @objc(debugPeekCatalogMappedSummary:reject:)
+    func debugPeekCatalogMappedSummary(
+        resolve: @escaping RCTPromiseResolveBlock,
+        reject: @escaping RCTPromiseRejectBlock
+    ) {
+        Task { @MainActor in
+            let text = MiniGameRNBridge.shared.provider.debugPeekCatalogMappedSummary()
+            resolve(text as NSString)
+        }
+    }
 }

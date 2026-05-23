@@ -19,6 +19,8 @@ final class MiniGameRNMenuHostViewModel: ObservableObject {
     @Published var maxGames: MaxGamesToShow = .six
     @Published var navigationKind: MiniGameNavigationKind = .dot
     @Published var delegateCharacterInGame: Bool = true
+    /** Raw **` NSDictionary`** forwarded from **`SimulaMiniGameMenu`** **`theme`** prop — bridged via **`MiniGameThemePatch.bridging`**. */
+    @Published var theme: NSDictionary?
 
     weak var hostingView: MiniGameRNMenuHostView?
 }
@@ -55,7 +57,7 @@ private struct MiniGameRNMenuSwiftUIView: View {
                     charDescription: descriptionForMenu,
                     maxGamesToShow: vm.maxGames,
                     theme: .default,
-                    themeOverrides: nil,
+                    themeOverrides: MiniGameThemePatch.bridging(fromJSObject: vm.theme as Any?),
                     navigationKind: vm.navigationKind,
                     messages: [],
                     conversationId: nil,
@@ -72,8 +74,9 @@ private struct MiniGameRNMenuSwiftUIView: View {
                     onImpression: { ctx in
                         vm.hostingView?.emitImpression(ctx)
                     },
-                    onDestinationOpen: { url in
-                        vm.hostingView?.emitDestinationOpen(url)
+                    opensHTTPAdClicksInSystemSafari: false,
+                    onAdDestinationWithContext: { ctx in
+                        vm.hostingView?.handleAdDestinationInApp(ctx)
                     }
                 )
             }
@@ -162,6 +165,11 @@ final class MiniGameRNMenuHostView: UIView {
         didSet { viewModel.delegateCharacterInGame = delegateCharacterInGame }
     }
 
+    /// Partial palette + typography keyed like web **`MiniGameTheme`** (**`RCT_EXPORT`** **` NSDictionary`** → **`MiniGameThemePatch.bridging`**).
+    @objc var theme: NSDictionary? {
+        didSet { viewModel.theme = theme }
+    }
+
     override init(frame: CGRect) {
         super.init(frame: frame)
         commonInit()
@@ -238,8 +246,24 @@ final class MiniGameRNMenuHostView: UIView {
         ])
     }
 
-    fileprivate func emitDestinationOpen(_ url: URL) {
-        onDestinationOpen?(["url": url.absoluteString])
+    fileprivate func handleAdDestinationInApp(_ context: MiniGameAdDestinationContext) {
+        emitDestinationPayload(context)
+
+        DispatchQueue.main.async { [weak self] in
+            guard let self, let presenter = rn_enclosingViewController() else { return }
+            AdDestinationPresenter.present(context: context, from: presenter)
+        }
+    }
+
+    fileprivate func emitDestinationPayload(_ context: MiniGameAdDestinationContext) {
+        var payload: [String: Any] = [
+            "url": context.url.absoluteString,
+            "catalogDestinationHint": context.resolvedDestinationHint.rawValue,
+        ]
+        if let gid = context.focusedGame?.id {
+            payload["focusedCatalogGameId"] = gid
+        }
+        onDestinationOpen?(payload)
     }
 
     fileprivate func emitPresentedChanged(_ presented: Bool) {

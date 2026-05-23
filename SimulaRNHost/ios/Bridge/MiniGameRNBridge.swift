@@ -12,7 +12,7 @@ final class MiniGameRNBridge {
     private init() {}
 
     /// Replace with **`SimulaAdSDK.configure`** before showing the native menu (placeholder until JS calls **`configure`**).
-    private(set) var provider = MiniGameProvider(apiKey: "replaceme_via_configure", devMode: true)
+    private(set) var provider = MiniGameProvider(apiKey: "replaceme_via_configure", devMode: false)
 
     func configure(apiKey: String, devMode: Bool) {
         provider = MiniGameProvider(apiKey: apiKey, devMode: devMode)
